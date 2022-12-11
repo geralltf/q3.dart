@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+
+<!--
+  Copyright (c) 2015, Gerallt G. Franke. All rights reserved. Use of my source code is restricted to GPL v3 License.
+  However kudos to iDSoftware for developing Quake iD 3 Engine. 
+    Also kudos to Thomas Diewald for MD3 Viewer http://thomasdiewald.com/blog/?p=1341
+    and tojicode for the javascript bsp loader http://media.tojicode.com/q3bsp/
+-->
+
+<html class="LoadingMap">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <title>Alphaaletha</title>
+
+    <script type="text/javascript">
+      var bf_byteBuff = new ArrayBuffer(4);var bf_wba = new Int8Array(bf_byteBuff);var bf_wuba = new Uint8Array(bf_byteBuff);var bf_wsa = new Int16Array(bf_byteBuff);var bf_wusa = new Uint16Array(bf_byteBuff);var bf_wia = new Int32Array(bf_byteBuff);var bf_wuia = new Uint32Array(bf_byteBuff);var bf_wfa = new Float32Array(bf_byteBuff);
+      var jsinterop = 
+      {
+        effect: function(type, selector, time, onComplete)
+        {
+          if(type=='fadein'){
+            $(selector).fadeIn(time, function(){
+              onComplete(selector);
+            });
+          }
+          else if(type=='fadeout'){
+            $(selector).fadeOut(time, function(){
+              onComplete(selector);
+            });
+          }
+        },     
+        strip_comments: function(shader_src){return shader_src.replace(/(\/\*[\w\'\s\r\n\*]*\*\/)|(\/\/[\w\s\']*)|(\<![\-\-\s\w\>\/]*\>)mg/ ,'');},
+        tokenise_shader: function(shader_src) {return shader_src.match(/[^\s\n\r\"]+/mg);},
+        enum_vr_devices: function(onVRDevices)
+        {
+        	if(navigator.getVRDevices){
+        	  navigator.getVRDevices().then(onVRDevices);  
+        	  return true;
+        	}
+        	if(navigator.mozGetVRDevices){
+           	  navigator.mozGetVRDevices().then(onVRDevices);
+           	  return true;
+            }
+        	return false;
+        },
+        enum_gamepads: function(onGamepads)
+        {
+          if(navigator.getGamepads){
+            onGamepads(navigator.getGamepads());  
+        	return true;
+          }
+          if(navigator.webkitGetGamepads){
+            onGamepads(navigator.webkitGetGamepads());  
+           	return true;
+          }
+          return false;
+        }
+      };
+    </script>
+    
+    <script type="text/javascript" src="./js/webgl-utils.js"></script>
+    <script type="text/javascript" src="./js/game-shim.js"></script>
+    <script async src="main.dart" type="application/dart"></script>
+    <script async src="packages/browser/dart.js"></script>
+    <script src="./js/jquery-1.6.4.min.js"></script>
+    
+    <link rel="stylesheet" href="./css/q3.css" type="text/css">
+</head>
+
+<body class="LoadingMap">
+  <div class="layer"></div>
+
+  <div id="viewport-frame">
+    <div id="viewport-fps"></div>
+    <canvas id="viewport">
+        Sorry, but your browser does not support WebGL or does not have it enabled.
+        To get a WebGL-enabled browser, please see:<br/>
+        <a href="http://get.webgl.org/" target="_blank">
+            http://get.webgl.org/
+        </a>
+    </canvas>
+    <div id="LoadingIndicator">
+        <!-- [ LOADING ] -->
+        <img id="loading_anim" src="./images/loading.png" alt="tech3" style="display:none;"></img>
+        
+        <h2 id="mapTitle"></h2>
+    </div>
+    <div class="Splashscreen"></div>
+    
+    <div id="progress-bar" style="display:none;">
+      <div id="progress"></div>
+      <div id="progress-url"></div>   
+    </div>
+    
+      <div id="viewport-ui" style="display:none;">
+        <div id="audio-graph" style="display:none;">
+          <div id="freq-graph">
+            <canvas class="visualizer" width="400" height="100"></canvas> 
+          </div>
+        </div>
+                   
+        <div id="server-status">
+          <div class="Text">
+            Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vestibulum sed congue leo. 
+          </div>
+        </div>
+        
+        <div class="CrosshairUI" style="display:none;">
+          <div class="CenterScreenViewLeft">
+            <div class="Text">
+              IVSOFTWARE-aletha<br/>alpha
+            </div>
+          </div>
+          
+          <div class="CenterScreenViewRight">
+            <div class="Text">
+              +99 Health increase
+            </div>
+          </div>
+        </div>
+        
+         <div class="Crosshair">
+            <img src="./images/crosshair.png" alt="X"></img>
+         </div>
+        
+        <div class="LeftCenterView" style="display:none;">
+          <div class="Text">
+          
+          </div>
+        </div>
+        
+        <div class="RightCenterView" style="display:none;">
+          <div class="Text">
+          
+          </div>
+        </div>
+        
+        <div class="TopMiddleView">
+          <div class="Text">
+            Lorem ipsum dolor sit amet, consectetur adipiscing elit. 
+          </div>
+        </div>
+         
+         <div class="BottomMiddleView">
+          <div class="Text">
+            <!--<img class="HUD" src="./images/Message2.png" alt="HUD"></img>-->
+          </div>
+         </div>
+      </div>
+  </div>
+
+  <div id="webgl-error" style="display: none; text-align: center; vertical-align: middle;">
+      Sorry, but your browser does not support WebGL or does not have it enabled.<br/>
+      To get a WebGL-enabled browser, please see:<br/>
+      <a href="http://get.webgl.org/" target="_blank">
+          http://get.webgl.org/
+      </a>
+  </div>
+  
+  <img style="display: none;" src="images/vr_goggles_sm.png" id="mobileVrBtn"/>
+  <img style="display: none;" src="images/fullscreen_sm.png" id="mobileFullscreenBtn"/>
+
+  <div id="viewport-info" style="display: none;">
+      <div class="ConfigView">
+          <h3>spectator</h3>
+          <ul>
+              <li><b>FPS:</b> <input type="checkbox" id="showFPS" checked/></li>
+              <li style="display: none;" id="vrToggle"><b>VR:</b> <img src="images/vr_goggles_sm.png" id="vrBtn"/></li>
+              <li><img src="images/fullscreen_sm.png" id="fullscreenBtn"/></li>
+          </ul>
+      </div>
+  </div>
+         
+
+   
+  <style type="text/css">
+    html.LoadingMap { 
+      -webkit-background-size: cover;
+      -moz-background-size: cover;
+      -o-background-size: cover;
+      background-size: cover;
+      margin: 0;
+      padding: 0;
+    }
+    body.LoadingMap
+    {
+      background-color: rgba(248, 247, 216, 0.4);
+    }
+    #progress-bar
+    {
+      background-color: white;
+    }
+    #progress
+    {
+      background-color: red; /* green: #47ea1c */
+      width:0;
+    }
+    #progress-url
+    {
+      color: white;
+    }
+    
+    #audio-graph > #freq-graph
+    {
+      color: white;
+    }
+    
+    div > div.Text
+    {
+      color: white;
+    }
+    
+    #server-status > div.Text
+    {
+      color: white;
+    }
+    #server-status
+    {
+      overflow: hidden;
+    }
+    
+    .CenterScreenViewLeft > div.Text 
+    {
+      font-size: 12pt;
+      text-align: right;
+    }
+    
+    .Tone
+    {
+      background-image: url(/images/tone.png);
+      width: 16px;
+      height: 16px;
+    }
+    
+    .TopMiddleView .Text
+    {
+      color: white;
+      background-color:blue;
+    }
+  </style>
+  <style type="text/gss">      
+    body[size] == ::window[size];
+    #viewport[size] == ::body[size];
+    
+    #viewport-fps
+    {
+      x: == 6;
+      y: == 6;
+    }
+    
+    #viewport-info[height] == 100;
+    #viewport-info[y] == ::#viewport[height] - 130;
+    
+    #progress-bar[height] == 6;
+    #progress-bar[width] == ::#viewport[width];
+    #progress-bar[x] == 0;
+    #progress-bar[y] == ::#viewport[height]-20;
+    #progress[height] == #progress-bar[height];
+    #progress-url[y] == ::#viewport[height]-39;
+    #progress-url[x] == ::window[cx] - 56;
+    
+    .ConfigView[width] == 99;
+    .ConfigView[height] == 63;
+    
+    .ConfigView[x] == ::window[width] - .ConfigView[width] - 15;
+    .ConfigView[y] == ::window[height] - .ConfigView[height] - 5;
+    .ConfigView{margin:0;}
+    .ConfigView li { float:left; margin:0; }
+    
+    #loading_anim[x] == ::window[cx] - 170;
+    #mapTitle[y] == ::window[cy] + 35;
+    
+    #audio-graph[x] == 6;
+    #audio-graph[y] == ::body[height] - #audio-graph[height];
+    #audio-graph[width] == 400;
+    #audio-graph[height] == 100;
+    
+    #server-status[x] == ::body[width] - #server-status[width];
+    #server-status[y] == 6;
+    #server-status[width] == 400;
+    #server-status[height] == ::body[height] - #audio-graph[height] - 30;
+  
+    
+    .Crosshair[x] == ::window[cx] - (.Crosshair[width] / 2);
+    .Crosshair[y] == ::window[cy] - (.Crosshair[height] / 2);
+    .Crosshair[width] == 66;
+    .Crosshair[height] == 66;
+    
+    .Splashscreen[x] == ::window[cx]  - (.Splashscreen[width]/2);
+    .Splashscreen[y] == ::window[cy] - (.Splashscreen[height]/2) - #LoadingIndicator[height] - 80;
+    .Splashscreen[width] == 200;
+    .Splashscreen[height] == 200;
+    .SplashscreenImg[width] == 200;
+    .SplashscreenImg[height] == 200;
+    
+    .TopMiddleView[x] == ::window[cx] - (.TopMiddleView[width]/2);
+    .TopMiddleView[y] == 6;
+    .TopMiddleView[width] == 600;
+    .TopMiddleView[height] == 100;
+    
+    .CenterScreenViewLeft[x] == ::window[cx] - .CenterScreenViewLeft[width] - 50;
+    .CenterScreenViewLeft[y] == ::window[cy] - 20;
+    .CenterScreenViewLeft[width] == 200;
+    .CenterScreenViewLeft[height] == 100;
+    
+    .CenterScreenViewRight[x] == ::window[cx] + .CenterScreenViewLeft[width];
+    .CenterScreenViewRight[y] == ::window[cy] + 20;
+    .CenterScreenViewRight[width] == 200;
+    .CenterScreenViewRight[height] == 100;
+    
+    .BottomMiddleView[x] == ::window[cx] - (.BottomMiddleView[width]/2);
+    .BottomMiddleView[y] == ::body[height] - .BottomMiddleView[height];
+    .BottomMiddleView[width] == 256;
+    .BottomMiddleView[height] == 256;
+   
+    
+    #LoadingIndicator 
+    {
+      width: == 100;
+      height: == 70;
+      cx: == ::window[cx];
+      cy: == ::window[cy];
+    
+      /*border: 2px solid #666;
+      border-radius: 5px;
+      background-color: black;*/
+      text-align: center;
+      pointer-events: none;
+    }
+  </style>
+  <script src="./js/gss-v2.0.0.js"></script>
+  
+  <script type="text/javascript">
+    window.gss_engine = new GSS(document);
+    if(window.gss_engine)
+    {
+      console.log('[style] GSS Constraint CSS initilised');
+    }
+    else
+    {
+      console.log('[style] Standard CSS');
+    }
+  </script>
+
+</body>
+</html>
